@@ -1,0 +1,92 @@
+package homework;
+
+import javax.swing.ImageIcon;
+import javax.swing.table.AbstractTableModel;
+
+
+
+/**
+ * A játékosok bábuinak adatait tartalmazza táblázat betöltéséhez.
+ * */
+public class PawnData extends AbstractTableModel{
+	private static final long serialVersionUID = 1L;
+	
+	
+	
+	//----------ADATTAGOK----------
+	Pawn[] player1;
+	Pawn[] player2;
+	static final int max_pawns = 5;
+	static final ImageIcon p1_icon = new ImageIcon("elephant.jpg");
+	static final ImageIcon p2_icon = new ImageIcon("rhino.jpg");
+	
+	
+	
+	//---------METÓDUSOK----------
+	
+	
+	/**
+	 * Az osztály konstruktora. Feltölti a mezõket.
+	 * Beállítja a mezõk szomszédjait.
+	 * */
+	public PawnData() {
+		player1 = new Pawn[max_pawns];
+		player2 = new Pawn[max_pawns];
+		for(int i = 0; i<max_pawns; ++i) {
+			player1[i] = new Pawn(p1_icon);
+			player2[i] = new Pawn(p2_icon);
+		}
+	}
+	
+	
+	public String getColumnName(int col) {
+		switch(col) {
+		case 0: return "Player1";
+		case 1: return "Player2";
+		default: return "Player3";
+		}
+	}
+	
+	
+	@Override
+	public int getRowCount() {
+		return max_pawns;
+	}
+
+	
+	@Override
+	public int getColumnCount() {
+		return 2;
+	}
+	
+	
+	public Class<? extends Object> getColumnClass(int column)
+    {
+        return getValueAt(0, column).getClass();
+    }
+	
+	
+	@Override
+	public Object getValueAt(int rowIndex, int columnIndex) {
+		Pawn pawn = new Pawn();
+		//Ha az elsõ játékos bábui érdekesek...
+		if(columnIndex == 0)
+			pawn = player1[rowIndex];
+		//Más különben a második játékos bábui az érdekesek...
+		else
+			pawn = player2[rowIndex];
+		return pawn;
+	}
+	
+	
+	public void setValueAt(Object value, int row, int col) {
+		//Ha az elsõ játékos bábui érdekesek...
+		if(col == 0)
+			player1[row] = (Pawn)value;
+		//Más különben a második játékos bábui az érdekesek...
+		else
+			player2[row] = (Pawn)value;
+		fireTableCellUpdated(row, col);
+	}
+
+}

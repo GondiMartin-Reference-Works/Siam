@@ -1,0 +1,44 @@
+package homework;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+
+/**
+ * A táblán található tárgyak (bábu, hegy) osztálya.
+ * */
+public class Thing extends JButton  {
+	private static final long serialVersionUID = 1L;
+	
+	
+	//----------ADATTAGOK----------
+	protected Field field;			//Referencia a mezõre, amin a tárgy (Thing) áll.
+	
+	
+	//---------METÓDUSOK----------
+	/**
+	 * Thing konstruktora.
+	 * Egy újonnan létrehozott tárgy alapértelmezetten a tábla szélén áll.
+	 * */
+	public Thing() {
+		field = null;
+		this.setBorder(BorderFactory.createEmptyBorder());
+	}
+
+	
+	/**
+	 * Visszaadja, hogy a tárgy éppen melyik mezõn áll.
+	 * Ha a visszatérített érték nulla, akkor a tárgy nem áll a táblán.
+	 * @return Mezõ
+	 * */
+	public Field GetField() { return field; }
+	
+	
+	/**
+	 * Beállítható, hogy a tárgy éppen melyik mezõn álljon.
+	 * Ha a beállítandó mezõ éréke null, akkor a tárgy a tábla mellett fog állni, tehát nem áll a táblán.
+	 * @param f - Adott mezõ, ahová állítjuk a tárgyat.
+	 * */
+	public void SetField(Field f) { 
+		field = f; 
+	}
+}

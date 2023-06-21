@@ -1,0 +1,195 @@
+package homework;
+
+import javax.swing.ImageIcon;
+
+
+
+/**
+ * Bábu osztály.
+ * */
+public class Pawn extends Thing{
+	private static final long serialVersionUID = 1L;
+	
+	
+	//----------ADATTAGOK----------
+	private Direction facing;	//Megadja, hogy adott bábu éppen melyik irányba néz.
+	
+	
+	//---------METÓDUSOK----------
+	
+	
+	/**
+	 * Bábu paraméter NÉLKÜLI konstruktora.
+	 * */
+	public Pawn() { 
+		super();
+		facing = Direction.UP;
+	}
+	
+	
+	/**
+	 * Bábu paraméteres konstruktora.
+	 * @param i - Az ikon, amivel az adott játékos bábuit megkülönböztetjük.
+	 * */
+	public Pawn(ImageIcon i) { 
+		super();
+		this.setIcon(i);
+		SetFacing(Direction.UP);
+	}
+	
+ 
+	/**
+	 * Visszaadja, hogy a bábu (Pawn) éppen melyik irányba néz.
+	 * @return  Az irány.
+	 * */
+	public Direction GetFacing() { return facing; }
+	
+	
+	/**
+	 * Beállítja, hogy a bábu melyik irányba nézzen.
+	 * @param d - Adott irány.
+	 * */
+	public void SetFacing(Direction d) { 
+		facing = d;
+		
+		//Ha a bábu rendelkezik képpel
+		if(this.getIcon() != null) {
+			
+			//Ha a játékos a orrszarvúkkal van
+			if(this.getIcon().toString().equals("R")) {
+				switch(d) {
+				case DOWN: this.setIcon(new ImageIcon("rhino_DOWN.jpg", "R"));
+					break;
+				case LEFT: this.setIcon(new ImageIcon("rhino_LEFT.jpg", "R"));
+					break;
+				case RIGHT: this.setIcon(new ImageIcon("rhino_RIGHT.jpg", "R"));
+					break;
+				case UP: this.setIcon(new ImageIcon("rhino_UP.jpg", "R"));
+					break;
+				default: this.setIcon(new ImageIcon("rhino_UP.jpg", "R"));
+					break;
+				
+				}
+				
+			}//Más különben a játékos az elefántokkal van
+			else {
+				switch(d) {
+				case DOWN: this.setIcon(new ImageIcon("elephant_DOWN.jpg", "E"));
+					break;
+				case LEFT: this.setIcon(new ImageIcon("elephant_LEFT.jpg", "E"));
+					break;
+				case RIGHT: this.setIcon(new ImageIcon("elephant_RIGHT.jpg", "E"));
+					break;
+				case UP: this.setIcon(new ImageIcon("elephant_UP.jpg", "E"));
+					break;
+				default: this.setIcon(new ImageIcon("elephant_UP.jpg", "E"));
+					break;
+				
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 * Adott irányba lépteti eggyel - a legközelebbi szomszédos mezõre - a bábut.
+	 * Ha nincs az adott irányba legközelebbi szomszédos mezõ, akkor a játékost lelépteti a tábláról.
+	 * @param d - Adott irány.
+	 * @return Eldönti, hogy a játékos a lépéssel mit okozott. -1: lelépett a tábláról; 0: sikertelen lépés; 1: sikeres lépés
+	 * */
+	public int Step(Direction d) {
+		int lelepett = 0;
+		Field itt_vagyok = this.GetField();
+		if(itt_vagyok != null) {
+			Field lepek_ide = itt_vagyok.GetNeighbor(d);
+			if(lepek_ide != null) {
+				if(lepek_ide.GetThing() == null) {
+					lepek_ide.AddThing(this);
+					itt_vagyok.RemoveThing();
+					this.SetField(lepek_ide);
+					lelepett = 1;
+				}
+			}else {
+				lelepett = -1;
+				this.SetField(lepek_ide);
+			}
+		}
+		return lelepett;
+	}
+	
+	
+	/**
+	 * Felülírjuk a toString() függvényt.
+	 * Ezzel megspóroljuk, hogy külön attribútumot vegyünk fel a név tárolására.
+	 * */
+	public String toString() {
+		return "Pawn";
+	}
+	
+	
+	/**
+	 * Kiértékeli a lökés eredményét.
+	 * @return - A lökés számbeli értéke.
+	 * */
+	private int calculatePush() {
+		
+		//Kiértékeljük a lökés eredményét
+		int lokes_erteke = 0;
+		Field iterator = this.GetField();
+		while(iterator != null) {						//Addig lépunk, amíg van szomszédos mezõ adott irányba
+			
+			//Aktuális mezõn található tárgy referenciája
+			Thing t1 = iterator.GetThing();
+			if(t1 != null) {
+				String t1_name = t1.toString();
+				
+				//Ha az aktuális mezõn létezik egy tárgy és az bábu ...
+				if(t1_name.equals("Pawn")) {
+					Pawn p = (Pawn)t1;
+					DirectionComparator dc = new DirectionComparator();
+					lokes_erteke += dc.compare(p.GetFacing(), facing);
+				}
+			}
+			iterator = iterator.GetNeighbor(facing);	//Tovább lépünk a bábu nézésének megfelelõen a következõ szomszédos mezõre.
+		}
+		return lokes_erteke;
+	}
+	
+	/**
+	 * Adott irányba a bábu tolást kezdeményez.
+	 * Tolás csak abba az irányba történhet, amerre a bábu éppen néz.
+	 * Tényleges lökés csak akkor történik, ha a lökés értéke pozitív.
+	 * */
+	public Pawn Push() {
+		Pawn leesett_babu = null;
+		//Ha a lökés eredménye pozitív, csak abban az esetben történik lökés
+		if(calculatePush() > 0) {
+			
+			//Eltároljuk, ki a lökés irányában az utolsó mezõ a bábutól
+			Field utolso_a_sorban = this.GetField();
+			while(utolso_a_sorban.GetNeighbor(facing) != null) {
+				utolso_a_sorban = utolso_a_sorban.GetNeighbor(facing);
+			}
+			
+			//Majd az utolsó mezõtõl kezdve az éppen aktuális mezõn található tárgyat eggyel arrébb léptetjük.
+			Field iterator = utolso_a_sorban;
+			Field innen_indultam = this.GetField();
+			while(iterator != innen_indultam.GetNeighbor(facing.Ellentet(facing))) {
+				Thing t1 = iterator.GetThing();											//Aktuális mezõn található tárgy.
+				if(t1 != null) {														//Megvizsgáljuk, hogy van-e az aktuális mezõn tolható tárgy ...
+					Field szomszed_iranyban = iterator.GetNeighbor(facing);				//Aktuális mezõ adott szomszédja.
+					if(szomszed_iranyban != null) {										// ... Megvizsgáljuk, hogy a szomszéd létezik-e ...
+						szomszed_iranyban.AddThing(t1);									// ... HA LÉTEZIK SZOMSZÉD: Szomszédra léptetjük az aktuális mezõn található tárgyat.
+					}
+					else if(szomszed_iranyban == null && t1.toString().equals("Pawn")){	// ... HA NEM LÉTEZIK ÉS A TÁRGY EGY BÁBU, akkor ezt jelezzük visszatérési értékként, hogy ez a bábu leesett a lökés során.
+						
+					}
+					t1.SetField(szomszed_iranyban);										//Beállítjuk tárgy mezõjének a szomszédot. (Lehet null a szomszéd, ha nem létezik, és ez így jó.)
+					iterator.RemoveThing();
+				}
+				iterator = iterator.GetNeighbor(facing.Ellentet(facing));				//Tovább lépünk a következõ szomszédos mezõre ... visszafelé.
+			}
+		}
+		return leesett_babu;
+	}
+}

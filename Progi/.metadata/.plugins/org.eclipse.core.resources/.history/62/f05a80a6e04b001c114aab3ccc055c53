@@ -1,0 +1,99 @@
+package homework;
+
+
+import java.util.HashMap;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+
+
+
+/**
+ * Mezõ osztály.
+ * Leszármazik a JButton osztályból, hogy úgy viselkedhessen, mint egy gomb. (Fõként kép kirajzolás miatt szükséges ez.)
+ * Tárolja az éppen egyetlen rajta álló tárgyat (Thing).
+ * Tárolja továbbá a szomszédos mezõit (Field).
+ * */
+public class Field extends JButton{
+	private static final long serialVersionUID = 1L;
+	
+	
+	//----------ADATTAGOK----------
+	private Thing thing;									//Referencia a mezõn található tárgyra
+	private HashMap<Direction, Field> neighbors;			//Referencia a mezõ szomszédjaira adott iránynak megfelelõen.
+	private static final ImageIcon icon = new ImageIcon("field.jpg");	//Referencia a mezõ megjelenítése során látható képre/ikonra.
+	
+	
+	//---------METÓDUSOK----------
+	/**
+	 * Field konstruktora.
+	 * */
+	public Field() {
+		this.setIcon(icon);
+		thing = null;
+		neighbors = new HashMap<Direction, Field>();
+	}
+	
+	
+	/**
+	 * Visszaadja az adott irányban található mezõ szomszédját.
+	 * Ha a nem létezik szomszédja az adott irányban null értéket térít vissza.
+	 * @param d - Adott irány.
+	 * @return Szomszéd adott irányban. 
+	 * */
+	public Field GetNeighbor(Direction d) {
+		Field f = neighbors.get(d);
+		if(f == null)
+			return null;
+		return f;
+	}
+	
+	
+	/**
+	 * Feltölti a mezõ szomszédjainak tábláját (listáját) egy adott szomszéddal ÉS a szomszéd tábláját kitölti ÖNMAGÁVAL.
+	 * Ha a nem létezik szomszédja az adott irányban, csak akkor veszi fel.
+	 * Ha a felvenni kívánt mezõ null, akkor nem történik tárolás.
+	 * Mindezek mellett a sikeresen felvett szomszédnak is eltároljuk EZT a mezõt.
+	 * @param d - Adott irány.
+	 * @param f - Adott mezõ.
+	 * */
+	public void SetNeighbor(Direction d, Field f) {
+		Field foglalt_e = neighbors.get(d);
+		if(foglalt_e == null && f != null) {
+			neighbors.put(d, f);
+			f.SetNeighbor(d.Ellentet(d), this);
+		}
+			
+	}
+	
+	
+	/**
+	 * Visszaadja a mezõn található tárgy (Thing) referenciáját.
+	 * @return Mezõn található tárgy.
+	 * */
+	public Thing GetThing() { return thing; }
+	
+	
+	/**
+	 * Eltávolítja a mezõn található egyetlen tárgyat.
+	 * */
+	public void RemoveThing() {
+		thing = null;
+	}
+	
+	
+	/**
+	 * Felveszi a mezõre az adott tárgyat.
+	 * @param t - Az adott tárgy, amit felveszünk a mezõre.
+	 * */
+	public void AddThing(Thing t) {
+		thing = t;
+	}
+	
+	
+	/**
+	 * Visszaadja a mezõn található képet.
+	 * */
+	public ImageIcon getImageIcon() {
+		return icon;
+	}
+}

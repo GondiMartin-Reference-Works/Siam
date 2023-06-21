@@ -1,0 +1,136 @@
+package homework;
+
+import javax.swing.table.AbstractTableModel;
+
+
+
+/**
+ * A mezõk adatait tartalmazza táblázat betöltéséhez.
+ * */
+public class FieldData extends AbstractTableModel{
+	private static final long serialVersionUID = 1L;
+	
+	
+	
+	//----------ADATTAGOK----------
+	Field[][] fields;
+	static final int rows = 5;
+	static final int cols = 5;
+	
+	
+	
+	//---------METÓDUSOK----------
+	
+	/**
+	 * Beállítja a tábla mezõinek a szomszédos mezõket.
+	 * */
+	private void setFieldNeighbors() {
+		for(int i = 0; i<rows; i++) {
+			for(int j = 0; j<cols; ++j) {
+				
+				//Ha a mezõ sarok ÉS ...
+				//... ÉS bal oldalon van ÉS...
+				if(j == 0 && (i == 0 || i==rows-1)) {
+					//... ÉS fent.
+					if(i == 0) {
+						fields[i][j].SetNeighbor(Direction.RIGHT, fields[i][j+1]);
+						fields[i][j].SetNeighbor(Direction.DOWN, fields[i+1][j]);
+					///... ÉS lent.
+					}else {
+						fields[i][j].SetNeighbor(Direction.RIGHT, fields[i][j+1]);
+						fields[i][j].SetNeighbor(Direction.UP, fields[i-1][j]);
+					}
+				//... ÉS jobb oldalon van ...
+				}else if(j == cols-1 && (i == 0 || i==rows-1)){
+					//... ÉS fent.
+					if(i == 0) {
+						fields[i][j].SetNeighbor(Direction.LEFT, fields[i][j-1]);
+						fields[i][j].SetNeighbor(Direction.DOWN, fields[i+1][j]);
+					///... ÉS lent.
+					}else {
+						fields[i][j].SetNeighbor(Direction.LEFT, fields[i][j-1]);
+						fields[i][j].SetNeighbor(Direction.UP, fields[i-1][j]);
+					}
+				//Ha a mezõ a játéktábla szélén helyezkedik el ÉS...
+				//Ekkor kizárólag két szomszédot állítunk attól függõen, hogy azok egy vízszintes/függõleges egyenesbe esnek-e.
+				//(pl.: A tábla felsõ szélén kizárólag a mezõ bal és jobb oldali szomszédait állítjuk.)
+				//Fontos, hogy mivel a SetNeighbor egy oda-vissza szomszéd-beállító függvény, így a mezõk egyes szomszédival nem kell foglalkoznunk.
+				//... ÉS a mezõnek vízszintesen állítható a szomszédai ...
+				}else if((i == 0 || i == rows-1) && (j != 1 || j != cols-1-1)) {
+					fields[i][j].SetNeighbor(Direction.RIGHT, fields[i][j+1]);
+					fields[i][j].SetNeighbor(Direction.LEFT, fields[i][j-1]);
+				//... ÉS a mezõnek függõlegesen állítható a szomszédai ...
+				}else if((j == 0 || j == cols-1) && (i != 1 || i != rows-1-1)) {
+					fields[i][j].SetNeighbor(Direction.UP, fields[i-1][j]);
+					fields[i][j].SetNeighbor(Direction.DOWN, fields[i+1][j]);
+				}
+				//... minden más esetben a mezõnek négy szomszédja lesz
+				else {
+					fields[i][j].SetNeighbor(Direction.RIGHT, fields[i][j+1]);
+					fields[i][j].SetNeighbor(Direction.DOWN, fields[i+1][j]);
+					fields[i][j].SetNeighbor(Direction.LEFT, fields[i][j-1]);
+					fields[i][j].SetNeighbor(Direction.UP, fields[i-1][j]);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Az osztály konstruktora. Feltölti a mezõket.
+	 * Beállítja a mezõk szomszédjait.
+	 * */
+	public FieldData() {
+		fields = new Field[rows][cols];
+		for(int i = 0; i<rows; ++i)
+			for(int j = 0; j<cols; ++j)
+				fields[i][j] = new Field();
+		this.setFieldNeighbors();
+	}
+	
+	
+	public String getColumnName(int col) {
+		switch(col) {
+		case 0: return "Mezo1";
+		case 1: return "Mezo2";
+		case 2: return "Mezo3";
+		case 3: return "Mezo4";
+		default: return "Mezo5";
+		}
+	}
+	
+	
+	@Override
+	public int getRowCount() {
+		return fields.length;
+	}
+
+	
+	@Override
+	public int getColumnCount() {
+		return fields[0].length;
+	}
+	
+	
+	public Class<? extends Object> getColumnClass(int column)
+    {
+        return getValueAt(0, column).getClass();
+    }
+	
+	
+	@Override
+	public Object getValueAt(int rowIndex, int columnIndex) {
+		Field field = fields[rowIndex][columnIndex];
+		return field;
+	}
+	
+	
+	public void setValueAt(Object value, int row, int col) {
+		Pawn p = (Pawn)value;
+		Field f = fields[row][col];
+		f.AddThing(p);
+		p.SetField(f);
+		p.SetField(f);
+		fireTableCellUpdated(row, col);
+	}
+
+}

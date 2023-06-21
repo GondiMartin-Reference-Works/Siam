@@ -1,0 +1,754 @@
+package homework;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.ComponentOrientation;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.table.TableCellRenderer;
+
+
+/**
+ * Megjelenítendõ ablak (Frame) osztálya.
+ * */
+public class GameFrame extends JFrame{
+	private static final long serialVersionUID = 1L;
+	
+	
+ 
+	//----------ADATTAGOK----------
+	final static boolean shouldFill = true;
+	final static boolean shouldWeightX = true;
+	final static int rocks_max_num = 3;
+	
+	/**Referencia a játéktábla adataira*/
+	private FieldData field_data;
+	/**Referencia a bábutábla adataira*/
+	private PawnData pawn_data;
+	/**Referencia a táblán található sziklák adataira*/
+	private Rock[] rock_data;
+	
+	private JTable board;
+	private JTable pawn_board;
+	
+	private JButton bt_step_off_on;
+	private JButton bt_step;
+	private JButton bt_push;
+	private JButton bt_rotate;
+	private JButton bt_done;
+	private boolean player1_turn;
+	private boolean bt_step_set_enabled;
+	private boolean bt_rotate_set_enabled;
+	
+	private JComboBox<Direction> direction_box;
+	private JLabel lb_irany;
+	private JLabel lb_babu;
+	private JLabel lb_mezo;
+	private JLabel lb_jatekos;
+	private final static JLabel lb_kiv = new JLabel("Kiválasztott ");
+	
+	
+	//---------JÁTÉK-MEGJELENÍTÕ-METÓDUSOK----------
+	
+	
+	/**
+	 * Kirajzolja helyesen a táblázat gombjainak a képét MEZÕK TÁBLÁZAT ALAPJÁN
+	 * */
+	private static class JFieldRenderer implements TableCellRenderer{ 
+		
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+				int row, int column) {
+			Field field = (Field)value;
+			Thing thing = field.GetThing();
+			if(thing != null && thing.toString().equals("Pawn"))
+				return (Pawn)thing;
+			else if(thing != null && thing.toString().equals("Rock")) {
+				return (Rock)thing;
+			}
+				
+			return field;
+		}
+		
+	}
+	
+	
+	/**
+	 * Kirajzolja helyesen a táblázat gombjainak a képét BÁBUK TÁBLÁZAT ALAPJÁN
+	 * */
+	private static class JPawnRenderer implements TableCellRenderer{
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+				int row, int column) {
+			return (Pawn)value;
+		}
+		
+	}
+	
+	
+	/**
+	 * Komponensek betöltése elõre
+	 * */
+	private void initComponents() {
+		
+		//Az ablak layout - GRIDBAGLAYOUT
+		this.setLayout(new GridBagLayout());
+		GridBagConstraints c = new GridBagConstraints();
+		if(shouldFill)
+			c.fill = GridBagConstraints.HORIZONTAL;
+		if(shouldWeightX)
+			c.weightx = 5.0;
+		c.weighty = 1.0;
+		setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+		
+		
+		//BORDERLAYOUT - CENTER - Játéktábla
+		board = new JTable(field_data);
+		board.addMouseListener(new FieldMouseListener());
+		board.setRowHeight(150);
+		board.setCellSelectionEnabled(true);
+		board.setRowSelectionAllowed(false);
+		board.setColumnSelectionAllowed(false);
+		board.getColumn("Mezo1").setCellRenderer(new JFieldRenderer());
+		board.getColumn("Mezo2").setCellRenderer(new JFieldRenderer());
+		board.getColumn("Mezo3").setCellRenderer(new JFieldRenderer());
+		board.getColumn("Mezo4").setCellRenderer(new JFieldRenderer());
+		board.getColumn("Mezo5").setCellRenderer(new JFieldRenderer());
+		board.setFillsViewportHeight(true);
+		c.gridx = 1;
+		c.gridy = 3;
+		c.gridheight = 2;
+		c.gridwidth = 5;
+		c.ipadx = 250;
+		c.insets = new Insets(50,0,20,10);
+		this.add(board, c);
+		
+	 
+		//Bábuk helyei
+		pawn_board = new JTable(pawn_data);
+		pawn_board.addMouseListener(new PawnMouseListener());
+		pawn_board.setRowHeight(150);
+		pawn_board.setCellSelectionEnabled(true);
+		pawn_board.setRowSelectionAllowed(false);
+		pawn_board.setColumnSelectionAllowed(false);
+		pawn_board.getColumn("Player1").setCellRenderer(new JPawnRenderer());
+		pawn_board.getColumn("Player2").setCellRenderer(new JPawnRenderer());
+		board.setFillsViewportHeight(true);
+		c.gridx = 0;
+		c.gridy = 3;
+		c.gridheight = 2;
+		c.gridwidth = 1;
+		c.ipadx = 15;
+		c.insets = new Insets(50,10,20,20);
+		this.add(pawn_board, c);
+		
+		//Játék statisztikák
+		lb_babu = new JLabel("bábu: semmi");
+		lb_babu.setBackground(Color.RED);
+		lb_irany = new JLabel("irány: UP");
+		lb_mezo = new JLabel("mezõ: semmi");
+		c.gridx = 0;
+		c.gridy = 0;
+		c.gridwidth = 2;
+		c.gridheight = 1;
+		c.ipady = 0;
+		c.ipadx = 0;
+		c.insets = new Insets(20, 10,5,20);
+		this.add(lb_kiv, c);
+		c.gridwidth = 2;
+		c.gridx = 6;
+		lb_jatekos = new JLabel("játékos: p1");
+		this.add(lb_jatekos, c);
+		c.gridx = 2;
+		c.gridy = 0;
+		c.gridwidth = 3;
+		c.gridheight = 1;
+		c.ipady = 0;
+		c.ipadx = 0;
+		c.insets = new Insets(20, 10,5,1);
+		this.add(lb_babu, c);
+		c.gridy = 1;
+		this.add(lb_mezo, c);
+		c.gridy = 2;
+		this.add(lb_irany, c);
+		
+		
+		//Lökés irányának kiválasztása - JCOMBO
+		direction_box = new JComboBox<Direction>();
+		direction_box.addActionListener(new DirectionSelectActionListener());
+		direction_box.addItem(Direction.UP);
+		direction_box.addItem(Direction.RIGHT);
+		direction_box.addItem(Direction.DOWN);
+		direction_box.addItem(Direction.LEFT);
+		c.gridx = 6;
+		c.gridy = 1;
+		c.gridwidth = 2;
+		c.gridheight = 1;
+		c.ipady = 10;
+		c.ipadx = 0;
+		c.insets = new Insets(1, 10,1,1);
+		this.add(direction_box, c);
+		
+		
+		//Gombjaink
+		bt_step = new JButton("Lépj!");
+		bt_step.addActionListener(new StepActionListener());
+		bt_step.addChangeListener(null);
+		bt_step_off_on = new JButton("Lépj fel/le a tábláról!");
+		bt_step_off_on.addActionListener(new StepOffOnActionListener());
+		bt_push = new JButton("Lökj!");
+		bt_push.addActionListener(new PushActionListener());
+		bt_rotate = new JButton("Forogj!");
+		bt_rotate.addActionListener(new RotateActionListener());
+		bt_done = new JButton("Passz!");
+		bt_done.addActionListener(new DoneActionListener());
+		c.ipadx = -500;
+		c.ipady = 10;
+		c.gridx = 7;
+		c.gridy = 2;
+		c.gridwidth = 1;
+		c.gridheight = 1;
+		c.insets = new Insets(5, 5,5,10);
+		this.add(bt_step, c);
+		c.gridx = 6;
+		c.gridy = 2;
+		this.add(bt_rotate, c);
+		c.gridy = 3;
+		c.gridx = 6;
+		this.add(bt_step_off_on, c);
+		c.gridy = 4;
+		c.gridx = 6;
+		c.gridwidth = 2;
+		this.add(bt_done, c);
+		c.gridy = 3;
+		c.gridx = 7;
+		c.gridwidth = 1;
+		this.add(bt_push, c);
+		
+	}
+	
+	
+	/**
+	 * GameFrame konstruktora
+	 * */
+	public GameFrame() {
+		
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		
+		//Játék elemek inic
+		rock_data = new Rock[rocks_max_num];
+		for (int i = 0; i < rock_data.length; i++) {
+			rock_data[i] = new Rock();
+		}
+		pawn_data = new PawnData();
+		field_data = new FieldData(rock_data);
+		
+		
+		//Játék kezdete
+		player1_turn = true; //Elsõ játékos kezd;
+		bt_step_set_enabled = true;
+		bt_rotate_set_enabled = true;
+		
+		
+		// Bezáráskor mentjük az adatokat
+		addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				try {
+					System.out.println("Closed");
+					e.getWindow().dispose();
+					// Mezõk adatai
+					ObjectOutputStream oos1 = new ObjectOutputStream(new FileOutputStream("fields.txt"));
+					oos1.writeObject(field_data.fields);
+					oos1.flush();
+					oos1.close();
+					
+					// Bábu tábla adatai - PLAYER1
+					ObjectOutputStream oos2 = new ObjectOutputStream(new FileOutputStream("player1.txt"));
+					oos2.writeObject(pawn_data.player1);
+					oos2.close();
+					
+					// Bábu tábla adatai - PLAYER1
+					ObjectOutputStream oos3 = new ObjectOutputStream(new FileOutputStream("player2.txt"));
+					oos3.writeObject(pawn_data.player2);
+					oos3.close();
+					
+					// A játékban éppen soron lévõ játékos
+					ObjectOutputStream oos4 = new ObjectOutputStream(new FileOutputStream("player_turn.txt"));
+					oos4.writeObject(player1_turn);
+					oos4.close();
+				}catch(Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+		});
+		
+		
+		//Ablak beállításai
+		setMinimumSize(new Dimension(1500, 250));
+		initComponents();
+		setResizable(false);
+		setTitle("Game");
+		
+		//Ablak középre állítása
+		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		this.setLocation(dim.width/2-this.getSize().width/2, 0);
+		
+		this.pack();
+	}
+	
+	
+	/**
+	 * Betölti folytatásra a fájlba elmentett játékot.
+	 * */
+	public void contGame() {
+		try {
+			// Mezõk adatai
+			ObjectInputStream ois1 = new ObjectInputStream(new FileInputStream("fields.txt"));
+			field_data.fields = (Field[][])ois1.readObject();
+			ois1.close();
+			
+			// Bábu tábla adatai - PLAYER1
+			ObjectInputStream ois2 = new ObjectInputStream(new FileInputStream("player1.txt"));
+			pawn_data.player1 = (Pawn[])ois2.readObject();
+			ois2.close();
+			
+			// Bábu tábla adatai - PLAYER1
+			ObjectInputStream ois3 = new ObjectInputStream(new FileInputStream("player2.txt"));
+			pawn_data.player2 = (Pawn[])ois3.readObject();
+			ois3.close();
+			
+			// A játékban éppen soron lévõ játékos
+			ObjectInputStream ois4 = new ObjectInputStream(new FileInputStream("player_turn.txt"));
+			player1_turn = (boolean)ois4.readObject();
+			ois4.close();
+		}catch(Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
+	
+	//---------JÁTÉK-LOGIKA-OSZTÁLYOK/METÓDUSOK----------
+	
+	/**
+	 * Figyeli, hogy a bábuk táblázatában éppen melyik cella van kijelölve.
+	 * */
+	private class PawnMouseListener implements MouseListener{
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			int col = pawn_board.getSelectedColumn();
+			int row = pawn_board.getSelectedRow();
+			if(pawn_board.getValueAt(row, col) != null)
+				lb_babu.setText("bábu: (" + (col + 1) + ", " + (row +1) + ")");
+			else
+				lb_babu.setText("bábu: semmi");
+			lb_babu.updateUI();
+		}
+
+
+		@Override
+		public void mousePressed(MouseEvent e) {
+			
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e) {
+			
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+			
+		}
+		
+	}
+	
+	
+	/**
+	 * Figyeli, hogy a mezõk táblázatában éppen melyik cella van kijelölve.
+	 * */
+	private class FieldMouseListener implements MouseListener{
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			int col = board.getSelectedColumn();
+			int row = board.getSelectedRow();
+			Field f;
+			if((f=(Field)board.getValueAt(row, col)) != null) {
+				
+				//Ha a mezõn található dolog bábu
+				if(f.GetThing() != null && f.GetThing().toString().equals("Pawn"))
+					lb_babu.setText("bábu: (" + (col + 1) + ", " + (row +1) + ")");
+				else
+					lb_babu.setText("bábu: semmi");
+				
+				lb_mezo.setText("mezõ: (" + (col + 1) + ", " + (row +1) + ")");
+				
+			}else
+				lb_mezo.setText("mezõ: semmi");
+			lb_mezo.updateUI();
+		}
+
+
+		@Override
+		public void mousePressed(MouseEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+	}
+
+	//LÉPÉSSEL KAPCSOLATOS
+	
+	/**
+	 * Figyeli a Lépj le/fel a tábláról! feliratú gombot.
+	 * Ha a játékos lépett, akkor már nem lökhet, viszont van lehetõsége forgatásra.
+	 * Ha tovább nem szeretne csinálni semmit, rányom a passz gombra.
+	 * Itt csak a játéktábláról való le/fel lépést kezeljük.
+	 * */
+	private class StepOffOnActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent e){
+			
+			Pawn p = null;
+			Field f = null;
+			
+			//BÁBUT ELÕSZÖR LÉPTETÜNK TÁBLÁRA
+			//Ha van kiválasztott mezõ a játéktáblán ÉS bábu a bábutáblán ÉS az NEM null
+			if(board.getSelectedColumn() >= 0 && pawn_board.getSelectedColumn() >= 0 && 
+					(p = (Pawn)pawn_board.getValueAt(pawn_board.getSelectedRow(), pawn_board.getSelectedColumn())) != null) {
+				
+				//Ha a játékos a sajátját választotta ki
+				if((player1_turn && pawn_board.getSelectedColumn() == 0) || (!player1_turn && pawn_board.getSelectedColumn() == 1)) {
+					
+					//Ha a kiválasztott mezõre léphetünk, mert nincs senki rajta
+					if((f = (Field)board.getValueAt(board.getSelectedRow(), board.getSelectedColumn())).GetThing() == null) {
+						p.SetField(f);
+						f.AddThing(p);
+						pawn_board.setValueAt(null, pawn_board.getSelectedRow(), pawn_board.getSelectedColumn());
+						bt_step_set_enabled = false;
+					
+					}else
+						JOptionPane.showMessageDialog(new JFrame(), "A kiválasztott mezõn már vannak!", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+				}else
+					JOptionPane.showMessageDialog(new JFrame(), "Saját bábut válassz, ne az ellenfelét!", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+				
+			}
+			
+			//BÁBU MÁR A JÁTÉKTÁBLÁN ÉS LEVESSZÜK
+			//Ha van kiválasztott mezõ a játéktáblán ÉS cella a bábutáblán ÉS az null ÉS az a játékoshoz tartozik
+			else if(board.getSelectedColumn() >= 0 && pawn_board.getSelectedColumn() >= 0 &&
+					pawn_board.getValueAt(pawn_board.getSelectedRow(), pawn_board.getSelectedColumn()) == null && 
+					(player1_turn && pawn_board.getSelectedColumn() == 0) || (!player1_turn && pawn_board.getSelectedColumn() == 1)) {
+				
+				//Ha a játékos olyan mezõt választott amin van valami
+				if((f = (Field)board.getValueAt(board.getSelectedRow(), board.getSelectedColumn())).GetThing() != null) {
+					Thing t = f.GetThing();
+					
+					//Ha a játékos kiválasztotta a saját bábuját
+					if(t.toString().equals("Pawn") &&  
+							((player1_turn && (p=(Pawn)f.GetThing()).getIcon().toString().equals("E")) || (!player1_turn && (p=(Pawn)f.GetThing()).getIcon().toString().equals("R")))) {
+						p.SetField(null);
+						f.RemoveThing();
+						pawn_board.setValueAt(p, pawn_board.getSelectedRow(), pawn_board.getSelectedColumn());
+						bt_step_set_enabled = false;
+					}else
+						JOptionPane.showMessageDialog(new JFrame(), "Probléma forrása, hogy nem saját bábut választottál.", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+				}else
+					JOptionPane.showMessageDialog(new JFrame(), "Ez egy üres mezõ!", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+			}else
+				JOptionPane.showMessageDialog(new JFrame(), "Nincs kiválasztott mezõ a játéktáblán!", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+			
+			//Ha a lépés sikeres volt, a lépés gombokat letiltjuk
+			if(!bt_step_set_enabled) {
+				bt_step.setEnabled(bt_step_set_enabled);
+				bt_step_off_on.setEnabled(bt_step_set_enabled);
+				bt_push.setEnabled(false);
+				field_data.fireTableDataChanged();
+				pawn_data.fireTableDataChanged();
+			}
+		}
+	}
+	
+ 
+	/**
+	 * Figyeli a Lépj! feliratú gombot.
+	 * Ha a játékos lépett, akkor már nem lökhet, viszont van lehetõsége forgatásra.
+	 * Ha tovább nem szeretne csinálni semmit, rányom a passz gombra.
+	 * Itt csak a játéktáblán belüli lépést kezeljük
+	 * */
+	private class StepActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+		
+			Pawn p = null;
+			Field f = null;
+			int lelepett = 0;
+			
+			//BÁBU MÁR A JÁTÉKTÁBLÁN VAN ÉS CSAK LÉPÜNK
+			//Ha van kiválasztott mezõ a játéktáblán
+			if(board.getSelectedColumn() >= 0) {
+				
+				//Ha a játékos olyan mezõt választott amin valami
+				if((f = (Field)board.getValueAt(board.getSelectedRow(), board.getSelectedColumn())).GetThing() != null) {
+					Thing t = f.GetThing();
+					
+					//Ha a játékos kiválasztotta a saját bábuját
+					if(t.toString().equals("Pawn") &&  
+							((player1_turn && (p=(Pawn)f.GetThing()).getIcon().toString().equals("E")) || (!player1_turn && (p=(Pawn)f.GetThing()).getIcon().toString().equals("R")))) {
+						lelepett = p.Step((Direction)direction_box.getSelectedItem());
+						//Sikeres lépés
+						if(lelepett == -1 || lelepett == 1) {
+							bt_step_set_enabled = false;
+							if(lelepett == -1) {
+								int column = 0;
+								if(player1_turn)
+									column = 0;
+								else
+									column = 1;
+								p.SetField(null);
+								pawn_board.setValueAt(p, pawn_data.firstNullValueAt(column) , column);
+								f.RemoveThing();
+							}
+						}
+					}else
+						JOptionPane.showMessageDialog(new JFrame(), "Probléma forrása, hogy nem saját bábut választottál.", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+				}else
+					JOptionPane.showMessageDialog(new JFrame(), "Ez egy üres mezõ!", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+			}else
+				JOptionPane.showMessageDialog(new JFrame(), "Nincs kiválasztott mezõ a játéktáblán!", "Hiba lépéskor", JOptionPane.ERROR_MESSAGE);
+			
+			//Ha a lépés sikeres volt, a lépés gombokat letiltjuk
+			if(!bt_step_set_enabled) {
+				bt_step.setEnabled(bt_step_set_enabled);
+				bt_step_off_on.setEnabled(bt_step_set_enabled);
+				bt_push.setEnabled(false);
+				field_data.fireTableDataChanged();
+				pawn_data.fireTableDataChanged();
+			}
+		}
+	}
+	
+	
+	/**
+	 * Passz feliratú gombot figyeli.
+	 * Ha rányomnak, automatikusan a másik játékos kerül sorra.
+	 * Ekkor minden gomb újra elérhetõ.
+	 * */
+	private class DoneActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			//Ha eddig az elsõ játékos köre volt...
+			if(player1_turn) {
+				player1_turn = false;
+				lb_jatekos.setText("játékos: p2");
+			}else {
+				player1_turn = true;
+				lb_jatekos.setText("játékos: p1");
+			}
+			
+			//Gombok alapértelmezettbe állítása
+			bt_step_off_on.setEnabled(true);
+			bt_step.setEnabled(true);
+			bt_push.setEnabled(true);
+			bt_rotate.setEnabled(true);
+			bt_step_set_enabled = true;
+			bt_rotate_set_enabled = true;
+		}
+		
+	}
+	
+	
+	/**
+	 * JCombo box - irányok kiválasztásának - mefigyelõje
+	 * Amikor egy irányt kiválasztunk, jelenítsük meg az irány szövegét a játéktábla fölött.
+	 * */
+	private class DirectionSelectActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			lb_irany.setText("irány: " + direction_box.getSelectedItem());
+		}
+	}
+	
+	
+	/**
+	 * Forogj! feliratú gombot figyeli.
+	 * Beállítja a játéktáblán található bábuk irányát nézés szerint.
+	 * */
+	private class RotateActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			Pawn p;
+			//Ha van aktuálisan kiválasztott mezõ
+			if(board.getSelectedColumn()>=0  ) {
+				
+				//Ha van azon álló tárgy ÉS az egy bábu ÉS az a játékosé
+				if((p = (Pawn)((Field)board.getValueAt(board.getSelectedRow(), board.getSelectedColumn())).GetThing()) != null && p.toString().equals("Pawn") &&
+						((player1_turn && p.getIcon().toString().equals("E")) || (!player1_turn && p.getIcon().toString().equals("R")))) {
+					p.SetFacing((Direction) direction_box.getSelectedItem());
+					bt_rotate_set_enabled = false;
+				}else
+					JOptionPane.showMessageDialog(new JFrame(), "Ez egy üres mezõ vagy nem saját bábut választottál! ", "Hiba forgatáskor", JOptionPane.ERROR_MESSAGE);
+			}else
+				JOptionPane.showMessageDialog(new JFrame(), "Nincs kiválasztott mezõ a játéktáblán!", "Hiba forgatáskor", JOptionPane.ERROR_MESSAGE);
+		
+			//Ha a forgatás sikeres volt, a forgatás gombot letiltjuk
+			if(!bt_rotate_set_enabled) {
+				bt_rotate.setEnabled(bt_rotate_set_enabled);
+				bt_push.setEnabled(false);
+				field_data.fireTableDataChanged();
+				pawn_data.fireTableDataChanged();
+			}
+		
+		}
+	}
+	
+	
+	/**
+	 * Figyeli a Lökj! feliratú gombot.
+	 * Az adott irányban a kiválasztott bábuval a játéktáblán lökést kezdeményezünk.
+	 * */
+	private class PushActionListener implements ActionListener{
+		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			Pawn p;
+			boolean push_success = false;
+			
+			//Ha van aktuálisan kiválasztott mezõ
+			if(board.getSelectedColumn()>=0  ) {
+				
+				//Ha van azon álló tárgy ÉS az egy bábu ÉS az a játékosé ÉS a lökés irányában van valami
+				if((p = (Pawn)((Field)board.getValueAt(board.getSelectedRow(), board.getSelectedColumn())).GetThing()) != null && p.toString().equals("Pawn") && 
+						((player1_turn && p.getIcon().toString().equals("E")) || (!player1_turn && p.getIcon().toString().equals("R"))) &&
+						p.GetField().GetNeighbor(p.GetFacing()).GetThing() != null) {
+					Thing leesett_babu_e = p.Push();
+					push_success = true;
+					//Ha valamilyen tárgy közben a lökés során leesett
+					if(leesett_babu_e != null) {
+						
+						//Ha az egy bábu volt ... akkor visszatesszük a bábutáblára
+						if(leesett_babu_e.toString().equals("Pawn")) {
+							int column = 0;
+							if(leesett_babu_e.getIcon().toString().equals("E"))
+								column = 0;
+							else
+								column = 1;
+							p = (Pawn)leesett_babu_e;
+							pawn_board.setValueAt(p, pawn_data.firstNullValueAt(column) , column);	
+						}
+						//Más esetben, egy szikla lehetett csak, ekkor a játéknak vége, és a játékos nyert
+						else {
+						
+							
+							//Nyertes eldöntése: aki az utolsó a sorban
+							Field utolso_a_sorban = p.GetField();
+							//Utolsó sorban lévõ elem
+							while(utolso_a_sorban.GetNeighbor(p.GetFacing()) != null) {
+								utolso_a_sorban = utolso_a_sorban.GetNeighbor(p.GetFacing());
+							}
+							//Addig megyünk vissza, amíg meg nem találjuk a nyertest: Bábu ÉS a lökés irányába nézett
+							Pawn p_nyertes = new Pawn();
+							while(utolso_a_sorban.GetNeighbor(p.GetFacing().Ellentet(p.GetFacing())) != p.GetField()) {
+								
+								// Ha az adott mezõn bábu van, és a lökés irányába néz, akkor meg van a nyertes bábu
+								if(utolso_a_sorban.GetThing().toString().equals("Pawn") && ((Pawn)utolso_a_sorban.GetThing()).GetFacing().equals(p.GetFacing())) {
+									p_nyertes = (Pawn)utolso_a_sorban.GetThing();
+									break;
+								}
+								
+								// Lépünk vissza
+								utolso_a_sorban = utolso_a_sorban.GetNeighbor(p.GetFacing().Ellentet(p.GetFacing()));
+							}
+							
+							
+							String nyertes = "";
+							if(p_nyertes.getIcon().toString().equals("E"))
+								nyertes = "ELSÕ JÁTÉKOS!";
+							else
+								nyertes = "MÁSODIK JÁTÉKOS!";
+							
+							// Fájlok törlése
+							File wd = new File(System.getProperty("user.dir"));
+							String[] fajl_nevek = {"fields.txt", "player_turn.txt", "player1.txt", "player2.txt"};
+							for(int i = 0; i<fajl_nevek.length; ++i) {
+								File fl = new File(wd, fajl_nevek[i]);
+								fl.delete();
+							}
+							
+							
+							//Kihirdetés
+							JOptionPane.showMessageDialog(new JFrame(), "Gratulálok, nyert a " + nyertes, "Vége a játéknak.", JOptionPane.OK_OPTION);
+							System.exit(0);
+						}
+						
+					}
+				}else
+					JOptionPane.showMessageDialog(new JFrame(), "Ez egy üres mezõ vagy nem saját bábut választottál, avagy nincs mit lökni!", "Hiba lökéskor", JOptionPane.ERROR_MESSAGE);
+			}else
+				JOptionPane.showMessageDialog(new JFrame(), "Nincs kiválasztott mezõ a játéktáblán!", "Hiba lökéskor", JOptionPane.ERROR_MESSAGE);
+		
+			//Ha a lökés sikeres volt
+			if(push_success) {
+				bt_push.setEnabled(false);
+				bt_rotate.setEnabled(false);
+				bt_step.setEnabled(false);
+				bt_step_off_on.setEnabled(false);
+				field_data.fireTableDataChanged();
+				pawn_data.fireTableDataChanged();
+			}
+		}
+	}
+}

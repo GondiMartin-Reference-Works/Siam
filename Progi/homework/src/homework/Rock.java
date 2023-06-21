@@ -1,0 +1,37 @@
+package homework;
+
+import javax.swing.ImageIcon;
+
+
+
+/**
+ * Szikla (hegy) osztály.
+ * */
+public class Rock extends Thing{
+	private static final long serialVersionUID = 1L;
+
+	
+	//----------ADATTAGOK----------
+	/**Referencia a hegy megjelenítése során látható képre/ikonra.*/
+	private static final ImageIcon icon = new ImageIcon("rock.png");
+	
+	
+
+	//---------METÓDUSOK----------
+	/**
+	 * Szikla konstruktora.
+	 * */
+	public Rock() {
+		super();
+		this.setIcon(icon);
+	}
+	
+	
+	/**
+	 * Felülírjuk a toString() függvényt.
+	 * Ezzel megspóroljuk, hogy külön attribútumot vegyünk fel a név tárolására.
+	 * */
+	public String toString() {
+		return "Rock";
+	}
+}

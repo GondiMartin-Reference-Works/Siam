@@ -1,0 +1,29 @@
+package homework;
+
+
+
+/**
+ * Szikla (hegy) osztály.
+ * */
+public class Rock extends Thing{
+
+	
+	
+	//---------METÓDUSOK----------
+	/**
+	 * Szikla konstruktora.
+	 * */
+	public Rock(ImageIcon i) {
+		super();
+		this.setIcon(i);
+	}
+	
+	
+	/**
+	 * Felülírjuk a toString() függvényt.
+	 * Ezzel megspóroljuk, hogy külön attribútumot vegyünk fel a név tárolására.
+	 * */
+	public String toString() {
+		return "Rock";
+	}
+}

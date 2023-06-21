@@ -1,0 +1,5 @@
+INDEX VERSION 1.131+C:\Users\User\Iskola\!BME\!Szemeszter3\Prog\!Házi feladat\Kész\Progi\.metadata\.plugins\org.eclipse.jdt.core
+2603447019.index
+4016022684.index
+871090627.index
+766581317.index
